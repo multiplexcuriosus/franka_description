@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="franka_arm_actuator" 
+                params="arm_id 
+                        no_prefix:=false 
+                        arm_prefix:='' 
+                        control_mode:='effort'" >
+        <xacro:property name="prefix" value="${'' if no_prefix else (arm_id + '_' if arm_prefix == '' else arm_prefix + '_' + arm_id + '_')}" />
+
+        <actuator>
+            <xacro:if value="${control_mode == 'position'}">
+                <position class="${arm_id}" name="${prefix}joint1" joint="${prefix}joint1" kp="4500" kv="450"/>
+                <position class="${arm_id}" name="${prefix}joint2" joint="${prefix}joint2" kp="4500" kv="450"/>
+                <position class="${arm_id}" name="${prefix}joint3" joint="${prefix}joint3" kp="3500" kv="350"/>
+                <position class="${arm_id}" name="${prefix}joint4" joint="${prefix}joint4" kp="3500" kv="350"/>
+                <position class="${arm_id}" name="${prefix}joint5" joint="${prefix}joint5" kp="2000" kv="200"/>
+                <position class="${arm_id}" name="${prefix}joint6" joint="${prefix}joint6" kp="2000" kv="200"/>
+                <position class="${arm_id}" name="${prefix}joint7" joint="${prefix}joint7" kp="2000" kv="200"/>
+            </xacro:if>
+            
+            <xacro:if value="${control_mode == 'velocity'}">
+                <velocity class="${arm_id}" name="${prefix}joint1" joint="${prefix}joint1" kv="450"/>
+                <velocity class="${arm_id}" name="${prefix}joint2" joint="${prefix}joint2" kv="450"/>
+                <velocity class="${arm_id}" name="${prefix}joint3" joint="${prefix}joint3" kv="350"/>
+                <velocity class="${arm_id}" name="${prefix}joint4" joint="${prefix}joint4" kv="350"/>
+                <velocity class="${arm_id}" name="${prefix}joint5" joint="${prefix}joint5" kv="200"/>
+                <velocity class="${arm_id}" name="${prefix}joint6" joint="${prefix}joint6" kv="200"/>
+                <velocity class="${arm_id}" name="${prefix}joint7" joint="${prefix}joint7" kv="200"/>
+            </xacro:if>
+
+            <xacro:if value="${control_mode == 'effort'}">
+                <motor class="${arm_id}" name="${prefix}joint1" joint="${prefix}joint1" ctrlrange="-87 87"/>
+                <motor class="${arm_id}" name="${prefix}joint2" joint="${prefix}joint2" ctrlrange="-87 87"/>
+                <motor class="${arm_id}" name="${prefix}joint3" joint="${prefix}joint3" ctrlrange="-87 87"/>
+                <motor class="${arm_id}" name="${prefix}joint4" joint="${prefix}joint4" ctrlrange="-87 87"/>
+                <motor class="${arm_id}" name="${prefix}joint5" joint="${prefix}joint5" ctrlrange="-87 87"/>
+                <motor class="${arm_id}" name="${prefix}joint6" joint="${prefix}joint6" ctrlrange="-87 87"/>
+                <motor class="${arm_id}" name="${prefix}joint7" joint="${prefix}joint7" ctrlrange="-87 87"/>
+            </xacro:if>
+
+        </actuator>
+    </xacro:macro>
+</mujoco>

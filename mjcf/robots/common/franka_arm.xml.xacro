@@ -1,0 +1,298 @@
+<?xml version="1.0"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="franka_arm">
+
+    <xacro:include filename="utils.xml.xacro" />
+
+    <!-- arm_id:          Namespace of the robot arm                                               -->
+    <!-- joint_limits:    Joint limits dict loaded from YAML                                       -->
+    <!-- kinematics:      Kinematics dict loaded from YAML                                         -->
+    <!-- inertials:       Inertials dict loaded from YAML                                          -->
+    <!-- dynamics:        Dynamics dict loaded from YAML                                           -->
+
+    <!-- vis_mesh_indices per link: list of sub-mesh indices, e.g. [0,1,2]           -->
+    <!-- generates geoms link0_0, link0_1, ... and link0_0_coll, link0_1_coll, ... -->
+    <xacro:macro name="franka_arm" params="arm_id 
+                                            arm_prefix:='' 
+                                            no_prefix:=false 
+                                            connected_to:='base' 
+                                            xyz:='0 0 0' 
+                                            rpy:='0 0 0' 
+                                            joint_limits 
+                                            inertials 
+                                            kinematics 
+                                            accelerometer_config 
+                                            dynamics
+                                            link0_vis_mesh_indices:='[0]'
+                                            link1_vis_mesh_indices:='[0]'
+                                            link2_vis_mesh_indices:='[0]'
+                                            link3_vis_mesh_indices:='[0]'
+                                            link4_vis_mesh_indices:='[0]'
+                                            link5_vis_mesh_indices:='[0]'
+                                            link6_vis_mesh_indices:='[0]'
+                                            link7_vis_mesh_indices:='[0]'
+                                            link0_vis_mesh_materials:='[]'
+                                            link1_vis_mesh_materials:='[]'
+                                            link2_vis_mesh_materials:='[]'
+                                            link3_vis_mesh_materials:='[]'
+                                            link4_vis_mesh_materials:='[]'
+                                            link5_vis_mesh_materials:='[]'
+                                            link6_vis_mesh_materials:='[]'
+                                            link7_vis_mesh_materials:='[]'
+                                            **ee_body">
+
+        <!-- Define prefix -->
+        <xacro:property name="prefix" value="${'' if no_prefix else (arm_id + '_' if arm_prefix == '' else arm_prefix + '_' + arm_id + '_')}" />
+        <xacro:property name="with_accelerometers" value="${'false' if accelerometer_config == 'none' else 'true'}" />
+
+        <!-- ── Resolve limits / dynamics / kinematics for all joints ── -->
+        <xacro:franka-limits     name="joint1" config="${joint_limits}" />
+        <xacro:franka-dynamics   name="joint1" config="${dynamics}"     />
+        <xacro:franka-kinematics name="joint1" config="${kinematics}" />
+
+        <xacro:franka-limits     name="joint2" config="${joint_limits}" />
+        <xacro:franka-dynamics   name="joint2" config="${dynamics}"     />
+        <xacro:franka-kinematics name="joint2" config="${kinematics}" />
+
+        <xacro:franka-limits     name="joint3" config="${joint_limits}" />
+        <xacro:franka-dynamics   name="joint3" config="${dynamics}"     />
+        <xacro:franka-kinematics name="joint3" config="${kinematics}" />
+
+        <xacro:franka-limits     name="joint4" config="${joint_limits}" />
+        <xacro:franka-dynamics   name="joint4" config="${dynamics}"     />
+        <xacro:franka-kinematics name="joint4" config="${kinematics}" />
+
+        <xacro:franka-limits     name="joint5" config="${joint_limits}" />
+        <xacro:franka-dynamics   name="joint5" config="${dynamics}"     />
+        <xacro:franka-kinematics name="joint5" config="${kinematics}" />
+
+        <xacro:franka-limits     name="joint6" config="${joint_limits}" />
+        <xacro:franka-dynamics   name="joint6" config="${dynamics}"     />
+        <xacro:franka-kinematics name="joint6" config="${kinematics}" />
+
+        <xacro:franka-limits     name="joint7" config="${joint_limits}" />
+        <xacro:franka-dynamics   name="joint7" config="${dynamics}"     />
+        <xacro:franka-kinematics name="joint7" config="${kinematics}" />
+
+        <xacro:franka-kinematics name="joint8" config="${kinematics}" />
+
+        <!-- ── MJCF worldbody subtree ── -->
+        <!--
+        MJCF represents the kinematic chain as nested <body> elements.
+        Each body corresponds to a URDF link; joints are declared inside
+        the child body (i.e. between parent body and this body).
+        -->
+
+        <!-- Mount body (connected_to anchor) -->
+        <xacro:unless value="${not connected_to}">
+            <body name="${connected_to}" childclass="${arm_id}">
+                <body name="${prefix}link0" pos="${xyz}" euler="${rpy}" gravcomp="1">
+                    <xacro:link_with_sc no_prefix="${no_prefix}" name="link0" vis_mesh_indices="${link0_vis_mesh_indices}" vis_mesh_materials="${link0_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                    <!-- link1: joint1 is declared inside this body -->
+                    <body name="${prefix}link1" pos="${franka_kin_pos_joint1}" euler="${franka_kin_euler_joint1}" gravcomp="1">
+                        <joint name="${prefix}joint1"
+                                type="hinge"
+                                axis="0 0 1"
+                                range="${franka_lower_joint1} ${franka_upper_joint1}"
+                                damping="${franka_damping_joint1}"
+                                frictionloss="${franka_friction_joint1}"
+                                actuatorfrcrange="-${franka_effort_joint1} ${franka_effort_joint1}" 
+                                actuatorgravcomp="true"/>
+                        <xacro:link_with_sc no_prefix="${no_prefix}" name="link1" vis_mesh_indices="${link1_vis_mesh_indices}" vis_mesh_materials="${link1_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                        <!-- link2 -->
+                        <body name="${prefix}link2" pos="${franka_kin_pos_joint2}" euler="${franka_kin_euler_joint2}" gravcomp="1">
+                            <joint name="${prefix}joint2"
+                                type="hinge"
+                                axis="0 0 1"
+                                range="${franka_lower_joint2} ${franka_upper_joint2}"
+                                damping="${franka_damping_joint2}"
+                                frictionloss="${franka_friction_joint2}"
+                                actuatorfrcrange="-${franka_effort_joint2} ${franka_effort_joint2}" 
+                                actuatorgravcomp="true" />
+                            <xacro:link_with_sc no_prefix="${no_prefix}" name="link2" vis_mesh_indices="${link2_vis_mesh_indices}" vis_mesh_materials="${link2_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                            <!-- link3 -->
+                            <body name="${prefix}link3" pos="${franka_kin_pos_joint3}" euler="${franka_kin_euler_joint3}" gravcomp="1">
+                                <joint name="${prefix}joint3"
+                                        type="hinge"
+                                        axis="0 0 1"
+                                        range="${franka_lower_joint3} ${franka_upper_joint3}"
+                                        damping="${franka_damping_joint3}"
+                                        frictionloss="${franka_friction_joint3}"
+                                        actuatorfrcrange="-${franka_effort_joint3} ${franka_effort_joint3}"
+                                        actuatorgravcomp="true" />
+                                <xacro:link_with_sc no_prefix="${no_prefix}" name="link3" vis_mesh_indices="${link3_vis_mesh_indices}" vis_mesh_materials="${link3_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                            <!-- link4 -->
+                            <body name="${prefix}link4" pos="${franka_kin_pos_joint4}" euler="${franka_kin_euler_joint4}" gravcomp="1">
+                                <joint name="${prefix}joint4"
+                                    type="hinge"
+                                    axis="0 0 1"
+                                    range="${franka_lower_joint4} ${franka_upper_joint4}"
+                                    damping="${franka_damping_joint4}"
+                                    frictionloss="${franka_friction_joint4}"
+                                    actuatorfrcrange="-${franka_effort_joint4} ${franka_effort_joint4}"
+                                    actuatorgravcomp="true" />
+                                <xacro:link_with_sc no_prefix="${no_prefix}" name="link4" vis_mesh_indices="${link4_vis_mesh_indices}" vis_mesh_materials="${link4_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                                <!-- link5 -->
+                                <body name="${prefix}link5" pos="${franka_kin_pos_joint5}" euler="${franka_kin_euler_joint5}" gravcomp="1">
+                                    <joint name="${prefix}joint5"
+                                            type="hinge"
+                                            axis="0 0 1"
+                                            range="${franka_lower_joint5} ${franka_upper_joint5}"
+                                            damping="${franka_damping_joint5}"
+                                            frictionloss="${franka_friction_joint5}"
+                                            actuatorfrcrange="-${franka_effort_joint5} ${franka_effort_joint5}"
+                                            actuatorgravcomp="true" />
+                                    <xacro:link_with_sc no_prefix="${no_prefix}" name="link5" vis_mesh_indices="${link5_vis_mesh_indices}" vis_mesh_materials="${link5_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                                    <!-- link6 -->
+                                    <body name="${prefix}link6" pos="${franka_kin_pos_joint6}" euler="${franka_kin_euler_joint6}" gravcomp="1">
+                                        <joint name="${prefix}joint6"
+                                            type="hinge"
+                                            axis="0 0 1"
+                                            range="${franka_lower_joint6} ${franka_upper_joint6}"
+                                            damping="${franka_damping_joint6}"
+                                            frictionloss="${franka_friction_joint6}"
+                                            actuatorfrcrange="-${franka_effort_joint6} ${franka_effort_joint6}"
+                                            actuatorgravcomp="true" />
+                                        <xacro:link_with_sc no_prefix="${no_prefix}" name="link6" vis_mesh_indices="${link6_vis_mesh_indices}" vis_mesh_materials="${link6_vis_mesh_materials}" with_accelerometers="false" />
+
+                                        <!-- link7 (visual rotated by pi/4 around z, matching original rpy="0 0 ${pi/4}") -->
+                                        <body name="${prefix}link7" pos="${franka_kin_pos_joint7}" euler="${franka_kin_euler_joint7}" gravcomp="1">
+                                            <joint name="${prefix}joint7"
+                                                    type="hinge"
+                                                    axis="0 0 1"
+                                                    range="${franka_lower_joint7} ${franka_upper_joint7}"
+                                                    damping="${franka_damping_joint7}"
+                                                    frictionloss="${franka_friction_joint7}"
+                                                    actuatorfrcrange="-${franka_effort_joint7} ${franka_effort_joint7}"
+                                                    actuatorgravcomp="true" />
+                                            <xacro:link_with_sc no_prefix="${no_prefix}" name="link7" vis_mesh_indices="${link7_vis_mesh_indices}" vis_mesh_materials="${link7_vis_mesh_materials}" with_accelerometers="false" />
+
+                                            <!-- link8: fixed flange (no joint needed in MJCF — child body with no joint = fixed) -->
+                                            <body name="${prefix}link8" pos="${franka_kin_pos_joint8}" euler="${franka_kin_euler_joint8}">
+                                                <!-- flange site for end-effector attachment -->
+                                                <site name="${prefix}link8_site" pos="0 0 0" />
+                                                <xacro:insert_block name="ee_body" />
+                                            </body> <!-- link8 -->
+                                        </body> <!-- link7 -->
+                                    </body> <!-- link6 -->
+                                </body> <!-- link5 -->
+                            </body> <!-- link4 -->
+                        </body> <!-- link3 -->
+                    </body> <!-- link2 -->
+                </body> <!-- link1 -->
+            </body> <!-- link0 -->
+        </body> <!-- connected_to anchor -->
+        </xacro:unless>
+
+        <!-- If connected_to is empty: start directly from link0 -->
+        <xacro:if value="${not connected_to}">
+            <body name="${prefix}link0" pos="${xyz}" euler="${rpy}" childclass="${arm_id}" gravcomp="1">
+                <xacro:link_with_sc no_prefix="${no_prefix}" name="link0" vis_mesh_indices="${link0_vis_mesh_indices}" vis_mesh_materials="${link0_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                    <!-- link1: joint1 is declared inside this body -->
+                    <body name="${prefix}link1" pos="${franka_kin_pos_joint1}" euler="${franka_kin_euler_joint1}" gravcomp="1">
+                        <joint name="${prefix}joint1"
+                                type="hinge"
+                                axis="0 0 1"
+                                range="${franka_lower_joint1} ${franka_upper_joint1}"
+                                damping="${franka_damping_joint1}"
+                                frictionloss="${franka_friction_joint1}"
+                                actuatorfrcrange="-${franka_effort_joint1} ${franka_effort_joint1}"
+                                actuatorgravcomp="true" />
+                        <xacro:link_with_sc no_prefix="${no_prefix}" name="link1" vis_mesh_indices="${link1_vis_mesh_indices}" vis_mesh_materials="${link1_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                        <!-- link2 -->
+                        <body name="${prefix}link2" pos="${franka_kin_pos_joint2}" euler="${franka_kin_euler_joint2}" gravcomp="1">
+                            <joint name="${prefix}joint2"
+                                type="hinge"
+                                axis="0 0 1"
+                                range="${franka_lower_joint2} ${franka_upper_joint2}"
+                                damping="${franka_damping_joint2}"
+                                frictionloss="${franka_friction_joint2}"
+                                actuatorfrcrange="-${franka_effort_joint2} ${franka_effort_joint2}"
+                                actuatorgravcomp="true" />
+                            <xacro:link_with_sc no_prefix="${no_prefix}" name="link2" vis_mesh_indices="${link2_vis_mesh_indices}" vis_mesh_materials="${link2_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                            <!-- link3 -->
+                            <body name="${prefix}link3" pos="${franka_kin_pos_joint3}" euler="${franka_kin_euler_joint3}" gravcomp="1">
+                                <joint name="${prefix}joint3"
+                                        type="hinge"
+                                        axis="0 0 1"
+                                        range="${franka_lower_joint3} ${franka_upper_joint3}"
+                                        damping="${franka_damping_joint3}"
+                                        frictionloss="${franka_friction_joint3}"
+                                        actuatorfrcrange="-${franka_effort_joint3} ${franka_effort_joint3}"
+                                        actuatorgravcomp="true" />
+                                <xacro:link_with_sc no_prefix="${no_prefix}" name="link3" vis_mesh_indices="${link3_vis_mesh_indices}" vis_mesh_materials="${link3_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                            <!-- link4 -->
+                            <body name="${prefix}link4" pos="${franka_kin_pos_joint4}" euler="${franka_kin_euler_joint4}" gravcomp="1">
+                                <joint name="${prefix}joint4"
+                                    type="hinge"
+                                    axis="0 0 1"
+                                    range="${franka_lower_joint4} ${franka_upper_joint4}"
+                                    damping="${franka_damping_joint4}"
+                                    frictionloss="${franka_friction_joint4}"
+                                    actuatorfrcrange="-${franka_effort_joint4} ${franka_effort_joint4}"
+                                    actuatorgravcomp="true" />
+                                <xacro:link_with_sc no_prefix="${no_prefix}" name="link4" vis_mesh_indices="${link4_vis_mesh_indices}" vis_mesh_materials="${link4_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                                <!-- link5 -->
+                                <body name="${prefix}link5" pos="${franka_kin_pos_joint5}" euler="${franka_kin_euler_joint5}" gravcomp="1">
+                                    <joint name="${prefix}joint5"
+                                            type="hinge"
+                                            axis="0 0 1"
+                                            range="${franka_lower_joint5} ${franka_upper_joint5}"
+                                            damping="${franka_damping_joint5}"
+                                            frictionloss="${franka_friction_joint5}"
+                                            actuatorfrcrange="-${franka_effort_joint5} ${franka_effort_joint5}"
+                                            actuatorgravcomp="true" />
+                                    <xacro:link_with_sc no_prefix="${no_prefix}" name="link5" vis_mesh_indices="${link5_vis_mesh_indices}" vis_mesh_materials="${link5_vis_mesh_materials}" with_accelerometers="${with_accelerometers}" />
+
+                                    <!-- link6 -->
+                                    <body name="${prefix}link6" pos="${franka_kin_pos_joint6}" euler="${franka_kin_euler_joint6}" gravcomp="1">
+                                        <joint name="${prefix}joint6"
+                                            type="hinge"
+                                            axis="0 0 1"
+                                            range="${franka_lower_joint6} ${franka_upper_joint6}"
+                                            damping="${franka_damping_joint6}"
+                                            frictionloss="${franka_friction_joint6}"
+                                            actuatorfrcrange="-${franka_effort_joint6} ${franka_effort_joint6}"
+                                            actuatorgravcomp="true" />
+                                        <xacro:link_with_sc no_prefix="${no_prefix}" name="link6" vis_mesh_indices="${link6_vis_mesh_indices}" vis_mesh_materials="${link6_vis_mesh_materials}" with_accelerometers="false" />
+
+                                        <!-- link7 (visual rotated by pi/4 around z, matching original rpy="0 0 ${pi/4}") -->
+                                        <body name="${prefix}link7" pos="${franka_kin_pos_joint7}" euler="${franka_kin_euler_joint7}" gravcomp="1">
+                                            <joint name="${prefix}joint7"
+                                                    type="hinge"
+                                                    axis="0 0 1"
+                                                    range="${franka_lower_joint7} ${franka_upper_joint7}"
+                                                    damping="${franka_damping_joint7}"
+                                                    frictionloss="${franka_friction_joint7}"
+                                                    actuatorfrcrange="-${franka_effort_joint7} ${franka_effort_joint7}"
+                                                    actuatorgravcomp="true" />
+                                            <xacro:link_with_sc no_prefix="${no_prefix}" name="link7" vis_mesh_indices="${link7_vis_mesh_indices}" vis_mesh_materials="${link7_vis_mesh_materials}"  with_accelerometers="false" />
+
+                                            <!-- link8: fixed flange (no joint needed in MJCF — child body with no joint = fixed) -->
+                                            <body name="${prefix}link8" pos="${franka_kin_pos_joint8}" euler="${franka_kin_euler_joint8}">
+                                                <!-- flange site for end-effector attachment -->
+                                                <site name="${prefix}link8_site" pos="0 0 0" />
+                                                <xacro:insert_block name="ee_body" />
+                                            </body> <!-- link8 -->
+                                        </body> <!-- link7 -->
+                                    </body> <!-- link6 -->
+                                </body> <!-- link5 -->
+                            </body> <!-- link4 -->
+                        </body> <!-- link3 -->
+                    </body> <!-- link2 -->
+                </body> <!-- link1 -->
+            </body> <!-- link0 -->
+        </xacro:if>
+
+    </xacro:macro>
+</mujoco>

@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- ============================================================== -->
+    <!-- Macro to add an <inertial> tag based on yaml-load properties   -->
+    <!--                                                                -->
+    <!-- name:     Name of the robot link (without prefix)              -->
+    <!-- inertial: Dictionary of inertia properties (see inertial.yaml) -->
+    <!-- ============================================================== -->
+    <xacro:macro name="franka-inertial" params="name inertials:=^">
+        <xacro:unless value="${name in inertials}">${xacro.warning('No MJCF inertial properties defined for: ' + name)}</xacro:unless>
+        <xacro:if value="${name in inertials}">
+            <xacro:property name="I" value="${inertials[name]}" lazy_eval="false"/>
+
+            <xacro:unless value="${'origin' in I}">${xacro.warning('Missing origin for: ' + name)}</xacro:unless>
+            <xacro:unless value="${'mass' in I}">${xacro.warning('Missing mass for: ' + name)}</xacro:unless>
+            <xacro:unless value="${'diaginertia' in I}">${xacro.warning('Missing diaginertia for: ' + name)}</xacro:unless>
+
+            <inertial pos="${I.origin.xyz}" quat="${I.origin.quat}" mass="${I.mass}" diaginertia="${I.diaginertia.xx} ${I.diaginertia.yy} ${I.diaginertia.zz}" />
+        </xacro:if>
+    </xacro:macro>
+
+    <!-- ========================================================== -->
+    <!-- Macro to add geoms (visual + collision) and inertial for   -->
+    <!-- a single body, with optional accelerometer sites.          -->
+    <!--                                                            -->
+    <!-- Mesh naming convention:                                    -->
+    <!--   Visual   : {name}_0, {name}_1, ...  (one geom per index) -->
+    <!--   Collision: {name}_coll              (single mesh)        -->
+    <!--                                                            -->
+    <!-- name:                Link name (without prefix)            -->
+    <!-- vis_mesh_indices:    List of visual sub-mesh indices       -->
+    <!-- with_accelerometers: Include accelerometer sites           -->
+    <!-- ========================================================== -->
+    <!-- Recursive helper to emit visual meshes without xacro:for (not available in Humble) -->
+    <xacro:macro name="emit_visual_meshes" params="prefix name vis_indices_raw vis_materials_raw i">
+        <xacro:unless value="${str(vis_indices_raw) == '' or i == len(str(vis_indices_raw).split(','))}">
+            <xacro:property name="idx" value="${str(vis_indices_raw).split(',')[i].strip()}" />
+            <xacro:property name="mat_raw"
+                            value="${(str(vis_materials_raw).split(',')[i].strip().strip(&quot;'&quot;))
+                                    if (str(vis_materials_raw).strip() != '' and i &lt; len(str(vis_materials_raw).split(',')))
+                                    else ''}" />
+            <geom name="${prefix}${name}_${idx}_visual"
+                  material="${mat_raw if mat_raw != '' else 'white'}"
+                  type="mesh"
+                  mesh="${name}_${idx}"
+                  class="visual" />
+            <xacro:emit_visual_meshes prefix="${prefix}" name="${name}" vis_indices_raw="${vis_indices_raw}" vis_materials_raw="${vis_materials_raw}" i="${i+1}" />
+        </xacro:unless>
+    </xacro:macro>
+
+    <xacro:macro name="link_with_sc" params="name no_prefix:='false' vis_mesh_indices:='[]' vis_mesh_materials:='['']' with_accelerometers:=false">
+        <xacro:property name="prefix" value="${'' if no_prefix else (arm_id + '_' if arm_prefix == '' else arm_prefix + '_' + arm_id + '_')}" />
+        
+        <!-- Visual mesh geoms: expand indices with recursion -->
+        <xacro:property name="vis_indices_raw" value="${str(vis_mesh_indices).strip('[]')}" />
+        <xacro:property name="vis_materials_raw" value="${str(vis_mesh_materials).strip('[]')}" />
+        <xacro:emit_visual_meshes prefix="${prefix}" name="${name}" vis_indices_raw="${vis_indices_raw}" vis_materials_raw="${vis_materials_raw}" i="0" />
+
+        <!-- Collision mesh geom: single mesh named {name}_coll -->
+        <geom name="${prefix}${name}_collision" type="mesh" mesh="${name}_coll" class="collision" />
+
+        <!-- Inertial properties -->
+        <xacro:franka-inertial name="${name}" />
+
+        <!-- Accelerometer sites -->
+        <xacro:if value="${with_accelerometers}">
+        <xacro:franka-accelerometers prefix="${prefix}" name="${name}" config="${accelerometer_config}" />
+        </xacro:if>
+    </xacro:macro>
+
+    <!-- ========================================================================= -->
+    <!-- Store joint limits from config as xacro properties.                       -->
+    <!-- Used when emitting the MJCF <joint> range/actuator attributes.            -->
+    <!--                                                                           -->
+    <!-- config - YAML struct defining joint limits                                -->
+    <!-- name   - Joint name (e.g. "joint1")                                       -->
+    <!-- ========================================================================= -->
+    <xacro:macro name="franka-limits" params="config name">
+        <xacro:property name="limits" value="${config[name]['limit']}" lazy_eval="false" />
+        <xacro:property name="franka_lower_${name}"   value="${limits.lower}"    scope="parent" />
+        <xacro:property name="franka_upper_${name}"   value="${limits.upper}"    scope="parent" />
+        <xacro:property name="franka_effort_${name}"  value="${limits.effort}"   scope="parent" />
+        <xacro:property name="franka_velocity_${name}" value="${limits.velocity}" scope="parent" />
+    </xacro:macro>
+
+    <!-- ========================================================================= -->
+    <!-- Store joint dynamics from config as xacro properties.                     -->
+    <!-- Used when emitting MJCF <joint> damping/frictionloss.                     -->
+    <!--                                                                           -->
+    <!-- config - YAML struct defining joint dynamics                              -->
+    <!-- name   - Joint name (e.g. "joint1")                                       -->
+    <!-- ========================================================================= -->
+    <xacro:macro name="franka-dynamics" params="config name">
+        <xacro:property name="dynamics" value="${config[name]['dynamic']}" lazy_eval="false" />
+        <xacro:property name="franka_damping_${name}"  value="${dynamics.damping}"  scope="parent" />
+        <xacro:property name="franka_friction_${name}" value="${dynamics.friction}" scope="parent" />
+    </xacro:macro>
+
+    <!-- ========================================================================= -->
+    <!-- Store joint kinematics from config as xacro properties.                   -->
+    <!-- Used when emitting MJCF <joint> pos/euler (origin).                       -->
+    <!--                                                                           -->
+    <!-- config - YAML struct defining joint kinematics                            -->
+    <!-- name   - Joint name (e.g. "joint1")                                       -->
+    <!-- ========================================================================= -->
+    <xacro:macro name="franka-kinematics" params="config name">
+        <xacro:property name="kinematics" value="${config[name]['kinematic']}" lazy_eval="false" />
+        <xacro:property name="franka_kin_pos_${name}"   value="${kinematics.x} ${kinematics.y} ${kinematics.z}"             scope="parent" />
+        <xacro:property name="franka_kin_euler_${name}" value="${kinematics.roll} ${kinematics.pitch} ${kinematics.yaw}"    scope="parent" />
+    </xacro:macro>
+
+    <!-- ================================================================================== -->
+    <!-- Adds accelerometer frames as MJCF <site> elements.                                 -->
+    <!-- Sensors (accelerometer) can then reference these sites.                            -->
+    <!--                                                                                    -->
+    <!-- name   - Link name for which to add accelerometer sites                            -->
+    <!-- prefix - Prefix to name                                                            -->
+    <!-- config - YAML struct defining link accelerometers                                  -->
+    <!-- ================================================================================== -->
+    <xacro:macro name="franka-accelerometers" params="name prefix config">
+        <xacro:property name="accelerometer_top"    value="${config[name]['accelerometer_top']}"    lazy_eval="false" />
+        <xacro:property name="accelerometer_bottom" value="${config[name]['accelerometer_bottom']}" lazy_eval="false" />
+        <site name="${prefix}${name}_accelerometer_top"
+              pos="${accelerometer_top.x} ${accelerometer_top.y} ${accelerometer_top.z}"
+              euler="${accelerometer_top.roll} ${accelerometer_top.pitch} ${accelerometer_top.yaw}" />
+        <site name="${prefix}${name}_accelerometer_bottom"
+              pos="${accelerometer_bottom.x} ${accelerometer_bottom.y} ${accelerometer_bottom.z}"
+              euler="${accelerometer_bottom.roll} ${accelerometer_bottom.pitch} ${accelerometer_bottom.yaw}" />
+    </xacro:macro>
+</mujoco>

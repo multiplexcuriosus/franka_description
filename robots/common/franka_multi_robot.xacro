@@ -1,0 +1,207 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="franka_multi_robot"
+              params="arm_ids
+                      robot_prefixes:=''
+                      joint_limits
+                      kinematics
+                      accelerometer_config:=none
+                      inertials
+                      dynamics
+                      parent:='world'
+                      xyzs
+                      rpys
+                      xyz_ee:='0 0 0'
+                      rpy_ee:='0 0 0'
+                      tcp_xyz:='0 0 0'
+                      tcp_rpy:='0 0 0'
+                      safety_distance:='0.03'
+                      hand:='true'
+                      ee_id:=none
+                      special_connection:=''
+                      gazebo:='false'
+                      with_sc:='false'
+                      ros2_control:=false
+                      use_mujoco:=false
+                      robot_ips:=''
+                      use_fake_hardware:=false
+                      fake_sensor_commands:=false
+                      gazebo_effort:=false
+                      description_pkg:='franka_description'
+                      connected_to:='base'
+                      fix_finger:=false">
+
+    <xacro:include filename="$(find franka_description)/robots/common/utils.xacro" />
+    <xacro:include filename="$(find franka_description)/robots/common/franka_arm.xacro" />
+    <xacro:include filename="$(find franka_description)/robots/common/franka_multi_arm.ros2_control.xacro" />
+
+    <!-- arm_ids/robot_ips/robot_prefixes accept comma or space separated values. -->
+    <xacro:property name="arm_ids_list"
+                    value="${[x.strip() for x in (arm_ids.split(',') if ',' in arm_ids else arm_ids.split()) if x.strip() != '']}" />
+    <xacro:property name="robot_ips_list"
+                    value="${[x.strip() for x in (robot_ips.split(',') if ',' in robot_ips else robot_ips.split()) if x.strip() != '']}" />
+    <xacro:property name="robot_prefixes_raw"
+                    value="${[x.strip() for x in (robot_prefixes.split(',') if ',' in robot_prefixes else robot_prefixes.split()) if x.strip() != '']}" />
+    <xacro:property name="robot_prefixes_list"
+                    value="${(['' for _ in range(len(arm_ids_list))] if len(robot_prefixes_raw) == 0 else ['' if p in ['','none','null'] else p for p in robot_prefixes_raw])}" />
+    <xacro:property name="robot_count" value="${len(arm_ids_list)}" />
+    <xacro:property name="xyz_list"
+                    value="${[x.strip() for x in xyzs.split(';') if x.strip() != '']}" />
+    <xacro:property name="rpy_list"
+                    value="${[x.strip() for x in rpys.split(';') if x.strip() != '']}" />
+
+    <xacro:property name="root_link" value="${parent if gazebo else connected_to}" />
+    <xacro:if value="${root_link != ''}">
+      <link name="${root_link}" />
+    </xacro:if>
+
+    <xacro:if value="${hand and ee_id == 'franka_hand'}">
+      <xacro:include filename="$(find franka_description)/end_effectors/common/franka_hand.xacro"/>
+      <xacro:include filename="$(find franka_description)/end_effectors/common/utils.xacro" />
+    </xacro:if>
+
+    <xacro:if value="${hand and ee_id != 'none' and ee_id != 'franka_hand'}">
+      <xacro:include filename="$(find franka_description)/end_effectors/common/ee_with_one_link.xacro"/>
+      <xacro:include filename="$(find franka_description)/end_effectors/common/utils.xacro" />
+    </xacro:if>
+
+    <xacro:macro name="arm_loop" params="i">
+      <xacro:unless value="${i == robot_count}">
+        <xacro:property name="arm_id_i" value="${arm_ids_list[i]}" />
+        <xacro:property name="robot_prefix_i"
+                        value="${robot_prefixes_list[i] if i &lt; len(robot_prefixes_list) else ''}" />
+        <xacro:property name="arm_prefix" value="${'' if robot_prefix_i == '' else robot_prefix_i + '_'}" />
+        <xacro:property name="name_stem" value="${arm_prefix + arm_id_i + '_'}" />
+        <xacro:property name="xyz_i" value="${xyz_list[i] if i &lt; len(xyz_list) else xyz_list[0]}" />
+        <xacro:property name="rpy_i" value="${rpy_list[i] if i &lt; len(rpy_list) else rpy_list[0]}" />
+
+        <xacro:franka_arm
+          arm_id="${arm_id_i}"
+          arm_prefix="${robot_prefix_i}"
+          xyz="${xyz_i}"
+          rpy="${rpy_i}"
+          safety_distance="${safety_distance}"
+          gazebo="${gazebo}"
+          joint_limits="${joint_limits}"
+          kinematics="${kinematics}"
+          accelerometer_config="${accelerometer_config}"
+          inertials="${inertials}"
+          dynamics="${dynamics}"
+          with_sc="${with_sc}"
+          connected_to=""
+        />
+
+        <xacro:if value="${root_link != ''}">
+          <joint name="${name_stem}${root_link}_joint" type="fixed">
+            <origin xyz="${xyz_i}" rpy="${rpy_i}" />
+            <parent link="${root_link}" />
+            <child  link="${name_stem}link0" />
+          </joint>
+        </xacro:if>
+
+        <xacro:if value="${hand and ee_id == 'franka_hand'}">
+          <xacro:if value="${arm_id_i == 'fp3'}">
+            <xacro:property name="ee_color" value="black" />
+          </xacro:if>
+          <xacro:if value="${arm_id_i == 'fr3' or arm_id_i == 'fer' or arm_id_i == 'fr3v2' or arm_id_i == 'fr3v2.1'}">
+            <xacro:property name="ee_color" value="white" />
+          </xacro:if>
+          <xacro:property name="connection" value="${special_connection if special_connection != '' else arm_id_i + '_link8'}" />
+          <xacro:franka_hand
+            connected_to="${arm_prefix}${connection}"
+            arm_id="${arm_id_i}"
+            arm_prefix="${robot_prefix_i}"
+            ee_id="${ee_id}_${ee_color}"
+            ee_inertials="${xacro.load_yaml('$(find franka_description)/end_effectors/' + ee_id + '/inertials.yaml')}"
+            rpy_ee="${rpy_ee}"
+            xyz_ee="${xyz_ee}"
+            tcp_xyz="${tcp_xyz}"
+            tcp_rpy="${tcp_rpy}"
+            safety_distance="${safety_distance}"
+            gazebo="${gazebo}"
+            description_pkg="${description_pkg}"
+            with_sc="${with_sc}"
+            fix_finger="${fix_finger}"
+          />
+        </xacro:if>
+
+        <xacro:if value="${hand and ee_id != 'none' and ee_id != 'franka_hand'}">
+          <xacro:property name="connection" value="${special_connection if special_connection != '' else arm_id_i + '_link8'}" />
+          <xacro:ee_with_one_link
+            connected_to="${arm_prefix}${connection}"
+            arm_id="${arm_id_i}"
+            arm_prefix="${arm_prefix}"
+            ee_id="${ee_id}"
+            ee_inertials="${xacro.load_yaml('$(find franka_description)/end_effectors/' + ee_id + '/inertials.yaml')}"
+            rpy_ee="${rpy_ee}"
+            xyz_ee="${xyz_ee}"
+            tcp_xyz="${tcp_xyz}"
+            tcp_rpy="${tcp_rpy}"
+            safety_distance="${safety_distance}"
+            gazebo="${gazebo}"
+            description_pkg="${description_pkg}"
+            with_sc="${with_sc}"
+          />
+        </xacro:if>
+
+        <xacro:if value="${gazebo}">
+          <xacro:gazebo-joint joint="${name_stem}joint1" transmission="hardware_interface/PositionJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint2" transmission="hardware_interface/PositionJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint3" transmission="hardware_interface/PositionJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint4" transmission="hardware_interface/PositionJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint5" transmission="hardware_interface/PositionJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint6" transmission="hardware_interface/PositionJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint7" transmission="hardware_interface/PositionJointInterface" />
+
+          <xacro:gazebo-joint joint="${name_stem}joint1" transmission="hardware_interface/VelocityJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint2" transmission="hardware_interface/VelocityJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint3" transmission="hardware_interface/VelocityJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint4" transmission="hardware_interface/VelocityJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint5" transmission="hardware_interface/VelocityJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint6" transmission="hardware_interface/VelocityJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint7" transmission="hardware_interface/VelocityJointInterface" />
+
+          <xacro:gazebo-joint joint="${name_stem}joint1" transmission="hardware_interface/EffortJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint2" transmission="hardware_interface/EffortJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint3" transmission="hardware_interface/EffortJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint4" transmission="hardware_interface/EffortJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint5" transmission="hardware_interface/EffortJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint6" transmission="hardware_interface/EffortJointInterface" />
+          <xacro:gazebo-joint joint="${name_stem}joint7" transmission="hardware_interface/EffortJointInterface" />
+
+          <xacro:transmission-franka-state arm_id="${arm_id_i}" />
+          <xacro:transmission-franka-model arm_id="${arm_id_i}"
+             root="${name_stem}joint1"
+             tip="${name_stem}joint8"
+           />
+
+          <xacro:if value="${ee_id == 'franka_hand'}">
+            <xacro:gazebo-joint joint="${name_stem}finger_joint1" transmission="hardware_interface/EffortJointInterface" />
+            <xacro:gazebo-joint joint="${name_stem}finger_joint2" transmission="hardware_interface/EffortJointInterface" />
+            <xacro:gazebo-friction link="${name_stem}leftfinger" mu="1.13" />
+            <xacro:gazebo-friction link="${name_stem}rightfinger" mu="1.13" />
+          </xacro:if>
+        </xacro:if>
+
+        <xacro:arm_loop i="${i+1}"/>
+      </xacro:unless>
+    </xacro:macro>
+
+    <xacro:arm_loop i="0"/>
+
+    <xacro:if value="${ros2_control}">
+      <xacro:franka_multi_arm_ros2_control
+          arm_ids="${arm_ids}"
+          robot_ips="${robot_ips}"
+          robot_prefixes="${robot_prefixes}"
+          use_fake_hardware="${use_fake_hardware}"
+          fake_sensor_commands="${fake_sensor_commands}"
+          gazebo="${gazebo}"
+          hand="${hand}"
+          gazebo_effort="${gazebo_effort}"
+          use_mujoco="${use_mujoco}"
+      />
+    </xacro:if>
+
+  </xacro:macro>
+</robot>

@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- ============================================================== -->
+    <!-- Macro to add an <inertial> tag based on yaml-load properties   -->
+    <!--                                                                -->
+    <!-- name:         Name of the end-effector link (without prefix)   -->
+    <!-- ee_inertials: Dictionary of inertia properties                 -->
+    <!-- ============================================================== -->
+    <xacro:macro name="ee-inertial" params="name ee_inertials:=^">
+            <xacro:unless value="${name in ee_inertials}">${xacro.warning('No MJCF inertial properties defined for: ' + name)}</xacro:unless>
+            <xacro:if value="${name in ee_inertials}">
+                <xacro:property name="I" value="${ee_inertials[name]}" lazy_eval="false"/>
+
+                <xacro:unless value="${'origin' in I}">${xacro.warning('Missing origin for: ' + name)}</xacro:unless>
+                <xacro:unless value="${'mass' in I}">${xacro.warning('Missing mass for: ' + name)}</xacro:unless>
+                <xacro:unless value="${'diaginertia' in I}">${xacro.warning('Missing diaginertia for: ' + name)}</xacro:unless>
+
+                <inertial pos="${I.origin.xyz}" quat="${I.origin.quat}" mass="${I.mass}" diaginertia="${I.diaginertia.xx} ${I.diaginertia.yy} ${I.diaginertia.zz}" />
+            </xacro:if>
+        </xacro:macro>
+
+    <!-- ========================================================== -->
+    <!-- Macro to add geoms (visual + collision) and inertial for   -->
+    <!-- a single end-effector body.                                -->
+    <!--                                                            -->
+    <!-- Mesh naming convention:                                    -->
+    <!--   Visual   : {name}_0, {name}_1, ...  (one geom per index) -->
+    <!--   Collision: {name}_coll              (single mesh)        -->
+    <!--                                                            -->
+    <!-- name:               EE link name (without prefix)          -->
+    <!-- prefix:             Full name prefix                       -->
+    <!-- vis_mesh_indices:   List of visual sub-mesh indices        -->
+    <!-- ========================================================== -->
+    <!-- Recursive helper to emit visual meshes without xacro:for (not available in Humble) -->
+    <xacro:macro name="emit_ee_visual_meshes" params="geom_prefix geom_name_stem mesh_name_stem vis_indices_raw vis_materials_raw i">
+        <xacro:unless value="${str(vis_indices_raw) == '' or i == len(str(vis_indices_raw).split(','))}">
+            <xacro:property name="idx" value="${str(vis_indices_raw).split(',')[i].strip()}" />
+            <xacro:property name="mat_raw"
+                            value="${(str(vis_materials_raw).split(',')[i].strip().strip(&quot;'&quot;))
+                                    if (str(vis_materials_raw).strip() != '' and i &lt; len(str(vis_materials_raw).split(',')))
+                                    else ''}" />
+            <geom name="${geom_prefix}${geom_name_stem}_${idx}_visual"
+                  type="mesh"
+                  mesh="${mesh_name_stem}_${idx}"
+                  material="${mat_raw if mat_raw != '' else 'white'}"
+                  class="visual" />
+            <xacro:emit_ee_visual_meshes geom_prefix="${geom_prefix}" geom_name_stem="${geom_name_stem}" mesh_name_stem="${mesh_name_stem}" vis_indices_raw="${vis_indices_raw}" vis_materials_raw="${vis_materials_raw}" i="${i+1}" />
+        </xacro:unless>
+    </xacro:macro>
+
+    <xacro:macro name="ee_link_with_sc" params="name prefix:=${ee_prefix} vis_mesh_indices:='[0]' vis_mesh_materials:='['']'">
+
+        <!-- Visual mesh geoms: expand indices with recursion -->
+        <xacro:property name="vis_indices_raw" value="${str(vis_mesh_indices).strip('[]')}" />
+        <xacro:property name="vis_materials_raw" value="${str(vis_mesh_materials).strip('[]')}" />
+        <xacro:emit_ee_visual_meshes geom_prefix="${prefix}" geom_name_stem="${name}" mesh_name_stem="${name}" vis_indices_raw="${vis_indices_raw}" vis_materials_raw="${vis_materials_raw}" i="0" />
+
+        <!-- Collision mesh geom: single mesh named {name}_coll -->
+        <geom name="${prefix}${name}_coll_collision" type="mesh" mesh="${name}_coll" class="collision" />
+
+        <!-- Inertial properties -->
+        <xacro:ee-inertial name="${name}" />
+
+    </xacro:macro>
+
+</mujoco>

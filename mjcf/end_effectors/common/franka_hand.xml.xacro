@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:include filename="utils.xml.xacro" />
+
+    <!-- Caution: 'connected_to' do not adapt to MuJoCo, this macro have to put correctly under desired "connected" body -->
+    <xacro:macro name="franka_hand"
+                params="arm_id 
+                        arm_prefix:='' 
+                        ee_inertials
+                        rpy_ee:='0 0 0'
+                        xyz_ee:='0 0 0'
+                        tcp_xyz:='0 0 0.1034'
+                        tcp_rpy:='0 0 0'
+                        no_prefix:=false
+                        hand_vis_mesh_indices:='[0]'
+                        finger_vis_mesh_indices:='[0]'
+                        hand_vis_mesh_materials:='[]'
+                        finger_vis_mesh_materials:='[]'">
+
+        <xacro:property name="ee_prefix" default="robot_" />
+        <xacro:unless value="${arm_id == ''}">
+            <xacro:property name="arm_prefix_modified" value="${'' if arm_prefix == '' else arm_prefix + '_'}" />
+            <xacro:property name="ee_prefix" value="${arm_prefix_modified}${arm_id}_" />
+        </xacro:unless>
+
+        <xacro:property name="finger_vis_indices_raw" value="${str(finger_vis_mesh_indices).strip('[]')}" />
+        <xacro:property name="finger_vis_materials_raw" value="${str(finger_vis_mesh_materials).strip('[]')}" />
+
+        <!--  hand body  -->
+        <body name="${ee_prefix}hand" pos="${xyz_ee}" euler="${rpy_ee}" gravcomp="1">
+            <xacro:ee_link_with_sc name="hand" prefix="${ee_prefix}" vis_mesh_indices="${hand_vis_mesh_indices}" vis_mesh_materials="${hand_vis_mesh_materials}" />
+
+            <!-- TCP site -->
+            <site name="${ee_prefix}hand_tcp" pos="${tcp_xyz}" euler="${tcp_rpy}" />
+
+            <!-- leftfinger body -->
+            <body name="${ee_prefix}leftfinger" pos="0 0 0.0584" euler="0 0 0" gravcomp="1">
+                <joint name="${ee_prefix}finger_joint1" class="finger" />
+                <xacro:ee-inertial name="leftfinger" />
+
+                <!-- Visual mesh geoms -->
+                <xacro:emit_ee_visual_meshes geom_prefix="${ee_prefix}" geom_name_stem="leftfinger" mesh_name_stem="finger" vis_indices_raw="${finger_vis_indices_raw}" vis_materials_raw="${finger_vis_materials_raw}" i="0" />
+
+                <!-- Collision geoms -->
+                <geom type="box" size="0.0085 0.004 0.0085" pos="0 0.0055 0.0445"/>
+                <geom type="box" size="0.003 0.002 0.003" pos="0.0055 0.002 0.05"/>
+                <geom type="box" size="0.003 0.002 0.003" pos="-0.0055 0.002 0.05"/>
+                <geom type="box" size="0.003 0.002 0.0035" pos="0.0055 0.002 0.0395"/>
+                <geom type="box" size="0.003 0.002 0.0035" pos="-0.0055 0.002 0.0395"/>
+
+            </body> <!-- leftfinger -->
+
+            <!-- rightfinger body -->
+            <body name="${ee_prefix}rightfinger" pos="0 0 0.0584" euler="0 0 ${pi}" gravcomp="1">
+                <joint name="${ee_prefix}finger_joint2" class="finger" />
+                <xacro:ee-inertial name="rightfinger" />
+
+                <!-- Visual mesh geoms -->
+                <xacro:emit_ee_visual_meshes geom_prefix="${ee_prefix}" geom_name_stem="rightfinger" mesh_name_stem="finger" vis_indices_raw="${finger_vis_indices_raw}" vis_materials_raw="${finger_vis_materials_raw}" i="0" />
+
+                <!-- Collision geoms -->
+                <geom type="box" size="0.0085 0.004 0.0085" pos="0 0.0055 0.0445"/>
+                <geom type="box" size="0.003 0.002 0.003" pos="0.0055 0.002 0.05"/>
+                <geom type="box" size="0.003 0.002 0.003" pos="-0.0055 0.002 0.05"/>
+                <geom type="box" size="0.003 0.002 0.0035" pos="0.0055 0.002 0.0395"/>
+                <geom type="box" size="0.003 0.002 0.0035" pos="-0.0055 0.002 0.0395"/>
+
+            </body> <!-- rightfinger -->
+
+        </body> <!-- hand -->
+
+  </xacro:macro>
+</mujoco>

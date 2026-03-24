@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find franka_description)/mjcf/robots/common/franka_arm.xml.xacro" />
+    <xacro:include filename="$(find franka_description)/mjcf/end_effectors/common/franka_hand.xml.xacro" />
+    <xacro:include filename="$(find franka_description)/mjcf/end_effectors/common/ee_with_one_link.xml.xacro" />
+
+    <!-- arm_ids:           Space- or comma-separated arm IDs (e.g. 'fr3 fr3' or 'fr3,fp3')      -->
+    <!-- robot_prefixes:    Space- or comma-separated prefixes per arm (e.g. 'left right')        -->
+    <!-- xyzs:              Semicolon-separated XYZ poses per arm (e.g. '0 0 0;1 0 0')           -->
+    <!-- rpys:              Semicolon-separated RPY poses per arm (e.g. '0 0 0;0 0 3.14')         -->
+    <xacro:macro name="franka_multi_robot"
+                 params="arm_ids
+                         robot_prefixes:=''
+                         joint_limits
+                         kinematics
+                         accelerometer_config:=none
+                         inertials
+                         dynamics
+                         xyzs
+                         rpys
+                         xyz_ee:='0 0 0'
+                         rpy_ee:='0 0 0'
+                         tcp_xyz:='0 0 0'
+                         tcp_rpy:='0 0 0'
+                         hand:=true
+                         ee_id:=none
+                         special_connection:=''
+                         connected_to:='base'
+                         link0_vis_mesh_indices:='[0]'
+                         link1_vis_mesh_indices:='[0]'
+                         link2_vis_mesh_indices:='[0]'
+                         link3_vis_mesh_indices:='[0]'
+                         link4_vis_mesh_indices:='[0]'
+                         link5_vis_mesh_indices:='[0]'
+                         link6_vis_mesh_indices:='[0]'
+                         link7_vis_mesh_indices:='[0]'
+                         hand_vis_mesh_indices:='[0]'
+                         finger_vis_mesh_indices:='[0]'
+                         ee_vis_mesh_indices:='[0]'
+                         link0_vis_mesh_materials:='[]'
+                         link1_vis_mesh_materials:='[]'
+                         link2_vis_mesh_materials:='[]'
+                         link3_vis_mesh_materials:='[]'
+                         link4_vis_mesh_materials:='[]'
+                         link5_vis_mesh_materials:='[]'
+                         link6_vis_mesh_materials:='[]'
+                         link7_vis_mesh_materials:='[]'
+                         hand_vis_mesh_materials:='[]'
+                         finger_vis_mesh_materials:='[]'
+                         ee_vis_mesh_materials:='[]'">
+
+        <!-- Parse arm_ids and robot_prefixes (comma or space separated) -->
+        <xacro:property name="arm_ids_list"
+                        value="${[x.strip() for x in (arm_ids.split(',') if ',' in arm_ids else arm_ids.split()) if x.strip() != '']}" />
+        <xacro:property name="robot_prefixes_raw"
+                        value="${[x.strip() for x in (robot_prefixes.split(',') if ',' in robot_prefixes else robot_prefixes.split()) if x.strip() != '']}" />
+        <xacro:property name="robot_prefixes_list"
+                        value="${(['' for _ in range(len(arm_ids_list))] if len(robot_prefixes_raw) == 0 else ['' if p in ['','none','null'] else p for p in robot_prefixes_raw])}" />
+        <xacro:property name="robot_count" value="${len(arm_ids_list)}" />
+
+        <!-- Parse xyzs/rpys (semicolon separated, one entry per arm) -->
+        <xacro:property name="xyz_list"
+                        value="${[x.strip() for x in xyzs.split(';') if x.strip() != '']}" />
+        <xacro:property name="rpy_list"
+                        value="${[x.strip() for x in rpys.split(';') if x.strip() != '']}" />
+
+        <!-- Recursive loop macro that instantiates one arm per iteration -->
+        <xacro:macro name="arm_loop" params="i">
+            <xacro:unless value="${i == robot_count}">
+                <xacro:property name="arm_id_i"       value="${arm_ids_list[i]}" />
+                <xacro:property name="robot_prefix_i" value="${robot_prefixes_list[i] if i &lt; len(robot_prefixes_list) else ''}" />
+                <xacro:property name="no_prefix_i"    value="${robot_prefix_i == ''}" />
+                <xacro:property name="xyz_i"          value="${xyz_list[i] if i &lt; len(xyz_list) else xyz_list[0]}" />
+                <xacro:property name="rpy_i"          value="${rpy_list[i] if i &lt; len(rpy_list) else rpy_list[0]}" />
+                <xacro:property name="unique_connected_to" value="${(robot_prefix_i + '_') if robot_prefix_i != '' else ''}${connected_to}" />
+
+                <xacro:franka_arm
+                    arm_id="${arm_id_i}"
+                    arm_prefix="${robot_prefix_i}"
+                    no_prefix="${no_prefix_i}"
+                    connected_to="${unique_connected_to}"
+                    xyz="${xyz_i}"
+                    rpy="${rpy_i}"
+                    joint_limits="${joint_limits}"
+                    kinematics="${kinematics}"
+                    accelerometer_config="${accelerometer_config}"
+                    inertials="${inertials}"
+                    dynamics="${dynamics}"
+                    link0_vis_mesh_indices="${link0_vis_mesh_indices}"
+                    link1_vis_mesh_indices="${link1_vis_mesh_indices}"
+                    link2_vis_mesh_indices="${link2_vis_mesh_indices}"
+                    link3_vis_mesh_indices="${link3_vis_mesh_indices}"
+                    link4_vis_mesh_indices="${link4_vis_mesh_indices}"
+                    link5_vis_mesh_indices="${link5_vis_mesh_indices}"
+                    link6_vis_mesh_indices="${link6_vis_mesh_indices}"
+                    link7_vis_mesh_indices="${link7_vis_mesh_indices}"
+                    link0_vis_mesh_materials="${link0_vis_mesh_materials}"
+                    link1_vis_mesh_materials="${link1_vis_mesh_materials}"
+                    link2_vis_mesh_materials="${link2_vis_mesh_materials}"
+                    link3_vis_mesh_materials="${link3_vis_mesh_materials}"
+                    link4_vis_mesh_materials="${link4_vis_mesh_materials}"
+                    link5_vis_mesh_materials="${link5_vis_mesh_materials}"
+                    link6_vis_mesh_materials="${link6_vis_mesh_materials}"
+                    link7_vis_mesh_materials="${link7_vis_mesh_materials}">
+                    <ee_body>
+                        <xacro:if value="${hand and ee_id == 'franka_hand'}">
+                            <xacro:franka_hand
+                                arm_id="${arm_id_i}"
+                                arm_prefix="${robot_prefix_i}"
+                                no_prefix="${no_prefix_i}"
+                                ee_inertials="${xacro.load_yaml('$(find franka_description)/mjcf/end_effectors/' + ee_id + '/inertials.yaml')}"
+                                xyz_ee="${xyz_ee}"
+                                rpy_ee="${rpy_ee}"
+                                tcp_xyz="${tcp_xyz}"
+                                tcp_rpy="${tcp_rpy}"
+                                hand_vis_mesh_indices="${hand_vis_mesh_indices}"
+                                finger_vis_mesh_indices="${finger_vis_mesh_indices}"
+                                hand_vis_mesh_materials="${hand_vis_mesh_materials}"
+                                finger_vis_mesh_materials="${finger_vis_mesh_materials}" />
+                        </xacro:if>
+                        <!-- generic single-link EE -->
+                        <xacro:if value="${hand and ee_id != 'none' and ee_id != 'franka_hand'}">
+                            <xacro:ee_with_one_link
+                                arm_id="${arm_id_i}"
+                                arm_prefix="${robot_prefix_i}"
+                                ee_id="${ee_id}"
+                                ee_inertials="${xacro.load_yaml('$(find franka_description)/mjcf/end_effectors/' + ee_id + '/inertials.yaml')}"
+                                xyz_ee="${xyz_ee}"
+                                rpy_ee="${rpy_ee}"
+                                tcp_xyz="${tcp_xyz}"
+                                tcp_rpy="${tcp_rpy}"
+                                ee_vis_mesh_indices="${ee_vis_mesh_indices}"
+                                ee_vis_mesh_materials="${ee_vis_mesh_materials}" />
+                        </xacro:if>
+                    </ee_body>
+                </xacro:franka_arm>
+
+                <xacro:arm_loop i="${i+1}" />
+            </xacro:unless>
+        </xacro:macro>
+
+        <xacro:arm_loop i="0" />
+
+    </xacro:macro>
+
+</mujoco>

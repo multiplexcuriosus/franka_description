@@ -1,0 +1,20 @@
+hand:
+  origin:
+    xyz: -0.01 0 0.03
+    quat: 1 0 0 0
+  mass: 0.73
+  diaginertia:
+    xx: 0.001
+    yy: 0.0025
+    zz: 0.0017
+
+leftfinger: &finger
+  origin:
+    xyz: 0.0 0.0 0.0
+    quat: 0.92388 0 0 -0.382683
+  mass: 0.015
+  diaginertia:
+    xx: 2.375e-06
+    yy: 2.375e-06
+    zz: 7.5e-07
+rightfinger: *finger

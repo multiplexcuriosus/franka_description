@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="fr3">
+
+    <!-- ── xacro includes ── -->
+    <xacro:include filename="$(find franka_description)/mjcf/robots/common/franka_robot.xml.xacro" />
+    <xacro:include filename="$(find franka_description)/mjcf/robots/common/franka_arm.xml.xacro" />
+    <xacro:include filename="$(find franka_description)/mjcf/robots/common/franka_arm_actuator.xml.xacro" />
+    <xacro:include filename="$(find franka_description)/mjcf/end_effectors/common/franka_hand.xml.xacro" />
+    <xacro:include filename="$(find franka_description)/mjcf/end_effectors/common/ee_with_one_link.xml.xacro" />
+    <xacro:include filename="$(find franka_description)/mjcf/end_effectors/common/franka_hand_actuator.xml.xacro" />
+
+    <!-- ── xacro args (overridable at parse time) ── -->
+    <xacro:arg name="arm_id"         default="fr3" />
+    <xacro:arg name="arm_prefix"     default="" />
+    <xacro:arg name="no_prefix"      default="false" />
+    <xacro:arg name="connected_to"   default="base" />
+    <xacro:arg name="xyz"            default="0 0 0" />
+    <xacro:arg name="rpy"            default="0 0 0" />
+    <xacro:arg name="hand"           default="true" />
+    <xacro:arg name="ee_id"          default="franka_hand" />
+    <xacro:arg name="xyz_ee"         default="0 0 0" />
+    <xacro:arg name="rpy_ee"         default="0 0 ${-pi/4}" />
+    <xacro:arg name="tcp_xyz"        default="0 0 0.1034" />
+    <xacro:arg name="tcp_rpy"        default="0 0 0" />
+    <xacro:arg name="fix_finger"     default="false" />
+    <xacro:arg name="control_mode"   default="effort" />
+
+    <!-- ── YAML data ── -->
+    <xacro:property name="joint_limits"        value="${xacro.load_yaml('$(find franka_description)/mjcf/robots/fr3/joint_limits.yaml')}" />
+    <xacro:property name="kinematics"          value="${xacro.load_yaml('$(find franka_description)/mjcf/robots/fr3/kinematics.yaml')}" />
+    <xacro:property name="inertials"           value="${xacro.load_yaml('$(find franka_description)/mjcf/robots/fr3/inertials.yaml')}" />
+    <xacro:property name="dynamics"            value="${xacro.load_yaml('$(find franka_description)/mjcf/robots/fr3/dynamics.yaml')}" />
+    <xacro:property name="accelerometer_config" value="${xacro.load_yaml('$(find franka_description)/mjcf/robots/fr3/accelerometers.yaml')}" />
+
+    <!-- ── Compiler ── -->
+    <compiler angle="radian" meshdir="$(find franka_description)/meshes" autolimits="true" />
+
+    <!-- ── Option ── -->
+    <option timestep="0.001" integrator="implicitfast" />
+
+    <!-- ── Visual ── -->
+    <visual>
+        <headlight ambient="0.4 0.4 0.4" diffuse="0.8 0.8 0.8" specular="0.1 0.1 0.1" />
+        <rgba haze="0.15 0.25 0.35 1" />
+        <global azimuth="150" elevation="-20" />
+    </visual>
+
+    <!-- Default classes -->
+    <default>
+        <default class="$(arg arm_id)">
+            <joint armature="0.1" damping="1"/>
+            <position inheritrange="1"/>
+            <default class="visual">
+                <geom type="mesh" group="2" contype="0" conaffinity="0"/>
+            </default>
+            <default class="finger">
+                <joint axis="0 1 0" type="slide" range="0 0.04"/>
+            </default>
+            <default class="collision">
+                <geom type="mesh" group="3" mass="0" density="0"/>
+            </default>
+            <site size="0.001" rgba="0.5 0.5 0.5 0.3" group="4"/>
+        </default>
+    </default>
+
+    <!-- ── Assets ── -->
+    <asset>
+        <!-- textures / ground material -->
+        <texture type="skybox"  builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
+        <texture type="2d" name="groundplane" builtin="checker" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+                 width="300" height="300" mark="edge" markrgb="0.8 0.8 0.8" />
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
+
+        <!-- named materials -->
+        <material name="black"       rgba=".2 .2 .2 1"/>
+        <material name="white"       rgba="1 1 1 1"/>
+        <material name="off_white"   rgba="0.901961 0.921569 0.929412 1"/>
+        <material name="red"         rgba="1 0.072272 0.039546 1"/>
+        <material name="gray"        rgba="0.863156 0.863156 0.863157 1"/>
+        <material name="button_green" rgba="0.102241 0.571125 0.102242 1"/>
+        <material name="button_red"  rgba="0.520996 0.008023 0.013702 1"/>
+        <material name="button_blue" rgba="0.024157 0.445201 0.737911 1"/>
+
+        <!-- arm link visual meshes -->
+        <mesh name="link0_0" file="robot_arms/fr3/visual/link0_0.obj"/>
+        <mesh name="link0_1" file="robot_arms/fr3/visual/link0_1.obj"/>
+        <mesh name="link0_2" file="robot_arms/fr3/visual/link0_2.obj"/>
+        <mesh name="link0_3" file="robot_arms/fr3/visual/link0_3.obj"/>
+        <mesh name="link0_4" file="robot_arms/fr3/visual/link0_4.obj"/>
+        <mesh name="link0_5" file="robot_arms/fr3/visual/link0_5.obj"/>
+        <mesh name="link0_6" file="robot_arms/fr3/visual/link0_6.obj"/>
+        <mesh name="link1_0" file="robot_arms/fr3/visual/link1.obj"/>
+        <mesh name="link2_0" file="robot_arms/fr3/visual/link2.obj"/>
+        <mesh name="link3_0" file="robot_arms/fr3/visual/link3_0.obj"/>
+        <mesh name="link3_1" file="robot_arms/fr3/visual/link3_1.obj"/>
+        <mesh name="link4_0" file="robot_arms/fr3/visual/link4_0.obj"/>
+        <mesh name="link4_1" file="robot_arms/fr3/visual/link4_1.obj"/>
+        <mesh name="link5_0" file="robot_arms/fr3/visual/link5_0.obj"/>
+        <mesh name="link5_1" file="robot_arms/fr3/visual/link5_1.obj"/>
+        <mesh name="link5_2" file="robot_arms/fr3/visual/link5_2.obj"/>
+        <mesh name="link6_0" file="robot_arms/fr3/visual/link6_0.obj"/>
+        <mesh name="link6_1" file="robot_arms/fr3/visual/link6_1.obj"/>
+        <mesh name="link6_2" file="robot_arms/fr3/visual/link6_2.obj"/>
+        <mesh name="link6_3" file="robot_arms/fr3/visual/link6_3.obj"/>
+        <mesh name="link6_4" file="robot_arms/fr3/visual/link6_4.obj"/>
+        <mesh name="link6_5" file="robot_arms/fr3/visual/link6_5.obj"/>
+        <mesh name="link6_6" file="robot_arms/fr3/visual/link6_6.obj"/>
+        <mesh name="link6_7" file="robot_arms/fr3/visual/link6_7.obj"/>
+        <mesh name="link7_0" file="robot_arms/fr3/visual/link7_0.obj"/>
+        <mesh name="link7_1" file="robot_arms/fr3/visual/link7_1.obj"/>
+        <mesh name="link7_2" file="robot_arms/fr3/visual/link7_2.obj"/>
+        <mesh name="link7_3" file="robot_arms/fr3/visual/link7_3.obj"/>
+
+        <!-- arm link collision meshes -->
+        <mesh name="link0_coll" file="robot_arms/fr3/collision/link0.stl"/>
+        <mesh name="link1_coll" file="robot_arms/fr3/collision/link1.stl"/>
+        <mesh name="link2_coll" file="robot_arms/fr3/collision/link2.stl"/>
+        <mesh name="link3_coll" file="robot_arms/fr3/collision/link3.stl"/>
+        <mesh name="link4_coll" file="robot_arms/fr3/collision/link4.stl"/>
+        <mesh name="link5_coll" file="robot_arms/fr3/collision/link5.stl"/>
+        <mesh name="link6_coll" file="robot_arms/fr3/collision/link6.stl"/>
+        <mesh name="link7_coll" file="robot_arms/fr3/collision/link7.stl"/>
+
+        <!-- hand visual meshes -->
+        <mesh name="hand_0"   file="robot_ee/franka_hand_white/visual/hand_0.obj"/>
+        <mesh name="hand_1"   file="robot_ee/franka_hand_white/visual/hand_1.obj"/>
+        <mesh name="hand_2"   file="robot_ee/franka_hand_white/visual/hand_2.obj"/>
+        <mesh name="hand_3"   file="robot_ee/franka_hand_white/visual/hand_3.obj"/>
+        <mesh name="hand_4"   file="robot_ee/franka_hand_white/visual/hand_4.obj"/>
+        <mesh name="finger_0" file="robot_ee/franka_hand_white/visual/finger_0.obj"/>
+        <mesh name="finger_1" file="robot_ee/franka_hand_white/visual/finger_1.obj"/>
+
+        <!-- hand collision meshes -->
+        <mesh name="hand_coll" file="robot_ee/franka_hand_white/collision/hand.stl"/>
+    </asset>
+
+    <!-- ── Worldbody ── -->
+    <worldbody>
+        <!-- ground plane -->
+        <geom name="floor" type="plane" size="0 0 0.05" material="groundplane" />
+
+        <!-- robot body tree -->
+        <xacro:franka_robot
+            arm_id="$(arg arm_id)"
+            arm_prefix="$(arg arm_prefix)"
+            no_prefix="$(arg no_prefix)"
+            connected_to="$(arg connected_to)"
+            xyz="$(arg xyz)"
+            rpy="$(arg rpy)"
+            joint_limits="${joint_limits}"
+            kinematics="${kinematics}"
+            inertials="${inertials}"
+            dynamics="${dynamics}"
+            accelerometer_config="none"
+            hand="$(arg hand)"
+            ee_id="$(arg ee_id)"
+            xyz_ee="$(arg xyz_ee)"
+            rpy_ee="$(arg rpy_ee)"
+            tcp_xyz="$(arg tcp_xyz)"
+            tcp_rpy="$(arg tcp_rpy)"
+            link0_vis_mesh_indices="[0,1,2,3,4,5,6]"
+            link1_vis_mesh_indices="[0]"
+            link2_vis_mesh_indices="[0]"
+            link3_vis_mesh_indices="[0,1]"
+            link4_vis_mesh_indices="[0,1]"
+            link5_vis_mesh_indices="[0,1,2]"
+            link6_vis_mesh_indices="[0,1,2,3,4,5,6,7]"
+            link7_vis_mesh_indices="[0,1,2,3]"
+            link0_vis_mesh_materials="['black','white','white','white','white','red','black']"
+            link1_vis_mesh_materials="['white']"
+            link2_vis_mesh_materials="['white']"
+            link3_vis_mesh_materials="['white','black']"
+            link4_vis_mesh_materials="['white','black']"
+            link5_vis_mesh_materials="['white','white','black']"
+            link6_vis_mesh_materials="['button_green','white','white','gray','button_red','white','black','button_blue']"
+            link7_vis_mesh_materials="['black','white','white','black']"
+            hand_vis_mesh_indices="[0,1,2,3,4]"
+            finger_vis_mesh_indices="[0,1]"
+            hand_vis_mesh_materials="['off_white','black','black','white','off_white']"
+            finger_vis_mesh_materials="['off_white','black']"
+        />
+    </worldbody>
+
+    <!-- ── Arm actuators ── -->
+    <xacro:franka_arm_actuator
+        arm_id="$(arg arm_id)"
+        arm_prefix="$(arg arm_prefix)"
+        no_prefix="$(arg no_prefix)"
+        control_mode="$(arg control_mode)"
+    />
+
+    <!-- ── Hand actuators ── -->
+    <xacro:if value="${'$(arg hand)' == 'true' and '$(arg ee_id)' == 'franka_hand'}">
+        <xacro:franka_hand_actuator
+            arm_id="$(arg arm_id)"
+            arm_prefix="$(arg arm_prefix)"
+        />
+    </xacro:if>
+
+</mujoco>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:include filename="utils.xml.xacro" />
+
+    <xacro:macro name="ee_with_one_link"
+                params="arm_id arm_prefix:=''
+                        ee_id 
+                        ee_inertials
+                        rpy_ee:='0 0 0'
+                        xyz_ee:='0 0 0'
+                        tcp_xyz:='0 0 0'
+                        tcp_rpy:='0 0 0'
+                        ee_vis_mesh_indices:='[0]'
+                        ee_vis_mesh_materials:=[]">
+
+        <xacro:property name="ee_prefix" default="robot_" />
+        <xacro:unless value="${arm_id == ''}">
+        <xacro:property name="arm_prefix_modified" value="${'' if arm_prefix == '' else arm_prefix + '_'}" />
+        <xacro:property name="ee_prefix" value="${arm_prefix_modified}${arm_id}_" />
+        </xacro:unless>
+
+        <!-- EE body (child of connected_to body in caller's context) -->
+        <body name="${ee_prefix}${ee_id}" pos="${xyz_ee}" euler="${rpy_ee}" gravcomp="1">
+            <xacro:ee_link_with_sc name="${ee_id}" prefix="${ee_prefix}" vis_mesh_indices="${ee_vis_mesh_indices}" vis_mesh_materials="${ee_vis_mesh_materials}" />
+
+            <!-- TCP site -->
+            <site name="${ee_prefix}${ee_id}_tcp" pos="${tcp_xyz}" euler="${tcp_rpy}" />
+
+        </body>
+
+    </xacro:macro>
+</mujoco>
