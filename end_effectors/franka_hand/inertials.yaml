@@ -2,7 +2,7 @@ hand:
   origin:
     xyz: -0.01 0.0 0.03
     rpy: 0 0 0
-  mass: 0.73
+  mass: 0.977
   inertia:
     xx: 0.001
     yy: 0.00025
